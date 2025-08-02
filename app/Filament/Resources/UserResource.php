@@ -26,19 +26,37 @@ class UserResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('email')
+                
+                    Forms\Components\TextInput::make('email')
                     ->email()
                     ->required()
                     ->maxLength(255),
-                Forms\Components\DateTimePicker::make('email_verified_at'),
+                
                 Forms\Components\TextInput::make('password')
                     ->password()
                     ->required()
+                    ->minLength(9)
                     ->maxLength(255),
-                Forms\Components\TextInput::make('photo')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('occupation')
-                    ->maxLength(255),
+                
+                Forms\Components\FileUpload::make('photo')
+                    ->directory('user')
+                    ->image()
+                    ->required(),
+
+                Forms\Components\Select::make('occupation')
+                    ->options([
+                        'developer' => 'Developer',
+                        'designer'  => 'Designer',
+                        'project-manager' => 'Project Manager',
+                        'cyber-security'  => 'Cyber Security',
+                        'project-manager' => 'Project Manager'
+                    ])
+                    ->required(),
+
+                // Forms\Components\Select::make('roles')
+                //     ->label('Role')
+                //     ->relationship('roles', 'name')
+                //     ->required(),
             ]);
     }
 
@@ -46,17 +64,10 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('photo'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('email_verified_at')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('photo')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('occupation')
-                    ->searchable(),
+                // Tables\Columns\TextColumn::make('roles.name'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -67,19 +78,15 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
                 ]),
             ]);
     }
@@ -89,13 +96,5 @@ class UserResource extends Resource
         return [
             'index' => Pages\ManageUsers::route('/'),
         ];
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
     }
 }
