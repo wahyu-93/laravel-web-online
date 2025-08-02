@@ -38,4 +38,11 @@ class Transaction extends Model
     {
         return $this->belongsTo(Pricing::class, 'pricing_id');
     }
+
+    public function isActive()
+    {
+        return $this->is_paid && $this->ended_at->isFuture();
+    }
+
+     
 }

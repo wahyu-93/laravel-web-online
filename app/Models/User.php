@@ -59,4 +59,22 @@ class User extends Authenticatable
     {
         return $this->hasMany(CourseStudent::class);
     }
+
+    public function getActiveSubscription()
+    {
+        return $this->transactions()
+            ->where('is_paid', true)
+            ->where('ended_at', '>=', now())
+            ->first();
+    }
+
+    public function hasActiveSubscription()
+    {
+        return $this->transactions()
+            ->where('is_paid', true)
+            ->where('ended_at', '>=', now())
+            ->exists(); //hasilnya ini klo ga true atau false
+    }
+
+
 }
