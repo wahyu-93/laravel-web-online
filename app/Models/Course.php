@@ -11,7 +11,7 @@ class Course extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name','thumbnail','about','category_id'];
+    protected $fillable = ['name','thumbnail','about','category_id','is_populer'];
 
     protected static function boot()
     {
@@ -25,6 +25,11 @@ class Course extends Model
         static::updating(function($model){
             $model->slug = Str::slug($model->name);
         });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
     public function courseMentors()

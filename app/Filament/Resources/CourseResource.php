@@ -4,8 +4,10 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CourseResource\Pages;
 use App\Filament\Resources\CourseResource\RelationManagers;
+use App\Filament\Resources\CourseResource\RelationManagers\CourseSectionsRelationManager;
 use App\Models\Course;
 use Filament\Forms;
+use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -23,23 +25,49 @@ class CourseResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('slug')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('thumbnail')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('about')
-                    ->required()
-                    ->columnSpanFull(),
-                Forms\Components\Toggle::make('is_populer')
-                    ->required(),
-                Forms\Components\TextInput::make('category_id')
-                    ->required()
-                    ->numeric(),
+                Fieldset::make('Details')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Course Name')
+                            ->required()
+                            ->columnSpanFull(),
+
+                        Forms\Components\FileUpload::make('thumbnail')
+                            ->required()
+                            ->directory('thumbnail')
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('about')
+                            ->label('Description Course')
+                            ->required()
+                            ->columnSpanFull(),
+                        
+                        Forms\Components\Select::make('is_populer')
+                            ->options([
+                                true => 'Populer',
+                                false => 'Not Populer'
+                            ])
+                            ->required(),
+
+                        Forms\Components\Select::make('category_id')
+                            ->label('Category Course')
+                            ->relationship('category', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ]),
+                
+                Fieldset::make('Additional')
+                    ->schema([
+                        Forms\Components\Repeater::make('courseBenefits')
+                            ->relationship('courseBenefits')
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Benefits')
+                                    ->required(),
+                            ])
+                    ])
+                    ->columns(1),
             ]);
     }
 
@@ -47,16 +75,17 @@ class CourseResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('slug')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Course Name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('thumbnail')
-                    ->searchable(),
+
+                Tables\Columns\ImageColumn::make('thumbnail')
+                    ->square(),
+
                 Tables\Columns\IconColumn::make('is_populer')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('category_id')
-                    ->numeric()
+
+                Tables\Columns\TextColumn::make('category.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -75,6 +104,7 @@ class CourseResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
@@ -93,6 +123,7 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ManageCourses::route('/'),
+            'edit' => Pages\EditCourse::route('/{record}/edit'),
         ];
     }
 
@@ -102,5 +133,12 @@ class CourseResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\CourseSectionsRelationManager::class,
+        ];
     }
 }
