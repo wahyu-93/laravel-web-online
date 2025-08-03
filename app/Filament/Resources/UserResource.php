@@ -25,22 +25,23 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
-                    ->maxLength(255),
+                    ->columnSpanFull(),
                 
                     Forms\Components\TextInput::make('email')
                     ->email()
                     ->required()
-                    ->maxLength(255),
+                    ->columnSpanFull(),
                 
                 Forms\Components\TextInput::make('password')
                     ->password()
                     ->required()
                     ->minLength(9)
-                    ->maxLength(255),
+                    ->columnSpanFull(),
                 
                 Forms\Components\FileUpload::make('photo')
                     ->directory('user')
                     ->image()
+                    ->columnSpanFull()
                     ->required(),
 
                 Forms\Components\Select::make('occupation')
@@ -51,12 +52,14 @@ class UserResource extends Resource
                         'cyber-security'  => 'Cyber Security',
                         'project-manager' => 'Project Manager'
                     ])
+                    ->columnSpanFull()
                     ->required(),
 
-                // Forms\Components\Select::make('roles')
-                //     ->label('Role')
-                //     ->relationship('roles', 'name')
-                //     ->required(),
+                Forms\Components\Select::make('roles')
+                    ->label('Role')
+                    ->relationship('roles', 'name')
+                    ->columnSpanFull()
+                    ->required(),
             ]);
     }
 
@@ -64,10 +67,11 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('photo'),
+                Tables\Columns\ImageColumn::make('photo')
+                    ->circular(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                // Tables\Columns\TextColumn::make('roles.name'),
+                Tables\Columns\TextColumn::make('roles.name'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
