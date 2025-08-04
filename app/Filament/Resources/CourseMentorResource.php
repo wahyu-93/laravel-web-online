@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CourseMentorResource\Pages;
 use App\Filament\Resources\CourseMentorResource\RelationManagers;
 use App\Models\CourseMentor;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -23,16 +24,28 @@ class CourseMentorResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('user_id')
+                Forms\Components\Select::make('course_id')
                     ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('course_id')
+                    ->preload()
+                    ->relationship('course','name')
+                    ->searchable(),
+
+                Forms\Components\Select::make('user_id')
+                    ->label('Mentor')
                     ->required()
-                    ->numeric(),
-                Forms\Components\Toggle::make('is_active')
-                    ->required(),
-                Forms\Components\Textarea::make('about')
+                    ->searchable()
+                    ->preload()
+                    ->options(fn() => User::role('mentor')->pluck('name','id')),
+                
+                Forms\Components\RichEditor::make('about')
                     ->columnSpanFull(),
+                
+                Forms\Components\Select::make('is_active')
+                    ->required()
+                    ->options([
+                        true => 'Active',
+                        false => 'Banned'
+                    ]),
             ]);
     }
 
@@ -40,14 +53,21 @@ class CourseMentorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user_id')
-                    ->numeric()
+                Tables\Columns\ImageColumn::make('user.photo')
+                    ->label('Photo')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('course_id')
-                    ->numeric()
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Mentor')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('course.name')
+                    ->label('Course')
+                    ->sortable(),
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -82,7 +102,7 @@ class CourseMentorResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageCourseMentors::route('/'),
+            'index'  => Pages\ManageCourseMentors::route('/'),
         ];
     }
 
