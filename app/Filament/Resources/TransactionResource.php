@@ -6,12 +6,15 @@ use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Pricing;
 use App\Models\Transaction;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,7 +25,9 @@ class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-shopping-cart';
+
+    protected static ?string $navigationGroup = 'Customers';
 
     public static function form(Form $form): Form
     {
@@ -110,6 +115,74 @@ class TransactionResource extends Resource
                                     DatePicker::make('ended_at')
                                         ->readonly(),
                                 ])
+                        ]),
+
+                    Step::make('Customer Information')
+                        ->schema([
+                            Forms\Components\Select::make('user_id')
+                                ->label('Student')
+                                ->relationship('user', 'email')
+                                ->preload()
+                                ->searchable()
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function($state, callable $set){
+                                    $user = User::find($state);
+
+                                    if(!$user){
+                                        return;
+                                    };
+
+                                    $name = $user->name;
+                                    $email = $user->email;
+
+                                    $set('name', $name);
+                                    $set('email', $email);
+                                })
+                                ->afterStateHydrated(function(callable $set, $state){
+                                    $userId = $state;
+
+                                    if($userId){
+                                        $user = User::find($userId);
+                                        
+                                        $name = $user->name;
+                                        $email = $user->email;
+
+                                        $set('name', $name);
+                                        $set('email', $email);
+                                    }
+                                }),
+                            
+                            Forms\Components\TextInput::make('name')
+                                ->readonly(),
+
+                            Forms\Components\TextInput::make('email')
+                                ->readonly(),
+                        ]),
+                    
+                    Step::make('Payment Information')
+                        ->schema([
+                            Forms\Components\ToggleButtons::make('is_paid')
+                                ->label('Apakah Sudah Membayar')
+                                ->boolean()
+                                ->grouped()
+                                ->icons([
+                                    true    => 'heroicon-o-pencil',
+                                    false   => 'heroicon-o-clock',
+                                ])
+                                ->required(),
+
+                            Forms\Components\Select::make('payment_type')
+                                ->options([
+                                    'Midtrans'  => 'Midtrans',
+                                    'Manual'    => 'Manual'
+                                ])
+                                ->required(),
+
+                            Forms\Components\FileUpload::make('proof')
+                                ->directory('proof')
+                                ->image(),
+
                         ])
                 ])
                 ->columns(1)
@@ -126,54 +199,56 @@ class TransactionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('booking_trx_id')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('user_id')
-                    ->numeric()
+                
+                Tables\Columns\ImageColumn::make('user.photo')
+                    ->label('Photo')
+                    ->circular(),
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Student')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('pricing_id')
-                    ->numeric()
+
+                Tables\Columns\TextColumn::make('pricing.name')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('sub_total_amount')
-                    ->numeric()
-                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('grand_total_amount')
-                    ->numeric()
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format($state, 0, ',', '.'))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('total_tax_amount')
-                    ->numeric()
-                    ->sortable(),
+
                 Tables\Columns\IconColumn::make('is_paid')
+                    ->label('Terverifikasi')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('payment_type')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('proof')
-                    ->searchable(),
+                
                 Tables\Columns\TextColumn::make('started_at')
                     ->date()
                     ->sortable(),
+                
                 Tables\Columns\TextColumn::make('ended_at')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function($record){
+                        $record->is_paid = true;
+                        $record->save();
+
+                        Notification::make()
+                            ->title('Order Approved')
+                            ->success()
+                            ->body('The Orde has been Successfully Approved.')
+                            ->send();
+                    })
+                    ->visible(fn($record) => !$record->is_paid),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

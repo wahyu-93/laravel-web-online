@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helper\TransactionHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,6 +29,15 @@ class Transaction extends Model
         'started_at'    => 'date',
         'ended_at'    => 'date',
     ];
+
+    public static function boot()
+    {
+        parent::boot();
+
+        static::creating(function($model){
+            $model->booking_trx_id = TransactionHelper::generateUniqueId();
+        });
+    }
 
     public function user()
     {
