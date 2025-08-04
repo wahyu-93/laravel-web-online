@@ -4,8 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
+use App\Models\Pricing;
 use App\Models\Transaction;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Wizard;
+use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -23,35 +28,95 @@ class TransactionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('booking_trx_id')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('user_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('pricing_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('sub_total_amount')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('grand_total_amount')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('total_tax_amount')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\Toggle::make('is_paid')
-                    ->required(),
-                Forms\Components\TextInput::make('payment_type')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('proof')
-                    ->maxLength(255),
-                Forms\Components\DatePicker::make('started_at')
-                    ->required(),
-                Forms\Components\DatePicker::make('ended_at')
-                    ->required(),
+
+                Wizard::make([
+                    Step::make('Product and Price')
+                        ->schema([
+                            Grid::make(2)
+                                ->schema([
+                                    Forms\Components\Select::make('pricing_id')
+                                        ->relationship('pricing', 'name')
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->live()
+                                        ->afterStateUpdated(function($state, callable $set){
+                                            $pricing = Pricing::find($state);
+
+                                            if (!$pricing) {
+                                                $set('total_tax_amount', null);
+                                                $set('grand_total_amount', null);
+                                                $set('sub_total_amount', null);
+                                                $set('duration', null);
+                                                return;
+                                            };
+                                            
+                                            $price = $pricing->price;
+                                            $duration = $pricing->duration;
+
+                                            $subTotal = $price * $state;
+                                            // $subTotal = $price;
+                                            $totalPpn = $subTotal * 0.11;
+                                            $totalAmount = $subTotal + $totalPpn;
+
+                                            $set('total_tax_amount', $totalPpn);
+                                            $set('grand_total_amount', $totalAmount);
+                                            $set('sub_total_amount', $price);
+                                            $set('duration', $duration);
+                                        })
+                                        ->afterStateHydrated(function(callable $set, $state){
+                                            $pricingId = $state;
+                                            if($pricingId){
+                                                $pricing = Pricing::find($pricingId);
+                                                $duration = $pricing->duration;
+                                                $set('duration', $duration);
+                                            }
+                                        }),
+
+                                    Forms\Components\TextInput::make('duration')
+                                        ->prefix('month')
+                                        ->readOnly(),
+                                ]),
+
+                            Grid::make(3)
+                                ->schema([
+                                    Forms\Components\TextInput::make('sub_total_amount')
+                                        ->prefix('IDR')
+                                        ->readonly(),
+
+                                    Forms\Components\TextInput::make('grand_total_amount')
+                                        ->prefix('IDR')
+                                        ->readonly(),
+
+                                    Forms\Components\TextInput::make('total_tax_amount')
+                                        ->prefix('IDR')
+                                        ->readonly()
+                                        ->helperText('Sudah Termasuk Pajak 11%'),
+                                ]),
+                            
+                            Grid::make(2)
+                                ->schema([
+                                    DatePicker::make('started_at')
+                                        ->live()
+                                        ->afterStateUpdated(function($state, callable $set, callable $get){
+                                            $duration = $get('duration');
+                                            if($state && $duration){
+                                                $endedAt = \Carbon\Carbon::parse($state)->addMonth($duration);
+                                                $set('ended_at', $endedAt->format('Y-m-d'));
+                                            }
+                                        })
+                                        ->required(),
+
+                                    DatePicker::make('ended_at')
+                                        ->readonly(),
+                                ])
+                        ])
+                ])
+                ->columns(1)
+                ->columnSpan('full')
+                ->skippable(),
+
+               
             ]);
     }
 
@@ -123,6 +188,9 @@ class TransactionResource extends Resource
     {
         return [
             'index' => Pages\ManageTransactions::route('/'),
+            'edit'  => Pages\EditTransaction::route('/{record}/edit'),
+            'create'  => Pages\CreateTransaction::route('/create'),
+
         ];
     }
 
