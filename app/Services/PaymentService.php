@@ -4,9 +4,7 @@ namespace App\Services;
 
 use App\Helper\TransactionHelper;
 use App\Models\Pricing;
-use App\Models\User;
-use App\Repositories\PricingRepository;
-use App\Repositories\TransactionRepository;
+use App\Repositories\PricingRepositoryInterface;
 use App\Repositories\TransactionRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,11 +15,11 @@ class PaymentService
     protected $pricingRepository;
     protected $transactionRepository;
 
-    public function __construct(MidtransService $midtransService, PricingRepository $pricingRepository, TransactionRepositoryInterface $transactionRepository)
+    public function __construct(MidtransService $midtransService, PricingRepositoryInterface $pricingRepository, TransactionRepositoryInterface $transactionRepository)
     {
         $this->midtransService = $midtransService;
         $this->pricingRepository = $pricingRepository;
-        $this->$transactionRepository = $transactionRepository;
+        $this->transactionRepository = $transactionRepository;
     }
 
     public function createPayment(int $pricingId)

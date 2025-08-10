@@ -25,6 +25,7 @@ class FrontController extends Controller
 
     public function index()
     {
+        dd('adadadad');
         return view('front.index');
     }
 
@@ -92,7 +93,7 @@ class FrontController extends Controller
         if(!$pricing){
             return redirect()->route('front.pricing')->with('error', 'No recent subscribed found.');
         };
-        
+
         return view('front.checkout_success', compact('pricing'));
     }
 }

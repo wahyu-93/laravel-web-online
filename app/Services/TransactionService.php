@@ -4,10 +4,18 @@ namespace App\Services;
 
 use App\Models\Pricing;
 use App\Models\Transaction;
+use App\Repositories\TransactionRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 
 class TransactionService
 {
+    // protected $transactionRepository;
+
+    // public function __construct(TransactionRepositoryInterface $transactionRepository)
+    // {
+    //     $this->transactionRepository = $transactionRepository;
+    // }
+
     public function prepareCheckout(Pricing $pricing)
     {
         // cek user
